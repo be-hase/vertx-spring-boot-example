@@ -2,33 +2,51 @@ package com.be_hase.example;
 
 import javax.annotation.PostConstruct;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 
+import io.vertx.core.VertxOptions;
+import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
+import io.vertx.ext.dropwizard.Match;
+import io.vertx.ext.dropwizard.MatchType;
 import io.vertx.rxjava.core.Vertx;
-import io.vertx.rxjava.core.http.HttpClient;
 
 @SpringBootApplication
 public class VertxApplication {
-    private static Vertx vertx = Vertx.vertx();
+    public static Vertx vertx;
 
-    @Autowired
-    private VertxHttpServer vertxHttpServer;
+    private final VertxHttpServer vertxHttpServer;
+
+    public VertxApplication(VertxHttpServer vertxHttpServer) {
+        this.vertxHttpServer = vertxHttpServer;
+    }
 
     public static void main(String[] args) {
+        VertxOptions vertxOptions = new VertxOptions()
+                .setMetricsOptions(new DropwizardMetricsOptions()
+                                           .setJmxEnabled(true)
+                                           .addMonitoredHttpClientEndpoint(
+                                                   new Match()
+                                                           .setValue(".*:.*")
+                                                           .setType(MatchType.REGEX)));
+
+        vertx = Vertx.vertx(vertxOptions);
+
         SpringApplication.run(VertxApplication.class, args);
-        SpringApplication.run(VertxApplication.class, args);
+
+//        When you want to use CPU core effectively.
+//
+//        ※ Attention HttpClient usage.
+//        http://vertx.io/docs/vertx-core/java/#_httpclient_usage
+//
+//        IntStream.range(0, vertxOptions.getEventLoopPoolSize()).forEach(i -> {
+//            SpringApplication.run(VertxApplication.class, args);
+//        });
     }
 
     @PostConstruct
     public void deployVerticle() {
-        ((io.vertx.core.Vertx) vertx.getDelegate()).deployVerticle(vertxHttpServer);
-    }
-
-    @Bean
-    public HttpClient httpClient() {
-        return vertx.createHttpClient();
+        io.vertx.core.Vertx delegate = (io.vertx.core.Vertx) vertx.getDelegate();
+        delegate.deployVerticle(vertxHttpServer);
     }
 }

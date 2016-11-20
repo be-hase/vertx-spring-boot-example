@@ -1,6 +1,5 @@
 package com.be_hase.example;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -18,8 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class VertxHttpServer extends AbstractVerticle {
-    @Autowired
-    private HttpClient httpClient;
+    private final HttpClient httpClient;
+
+    public VertxHttpServer(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     @Override
     public void start() throws Exception {
@@ -28,7 +30,7 @@ public class VertxHttpServer extends AbstractVerticle {
         router.route().handler(LoggerHandler.create(LoggerFormat.DEFAULT));
         router.route().handler(BodyHandler.create().setBodyLimit(10 * 1024 * 1024));
         router.route(HttpMethod.GET, "/test").handler(context -> {
-            log.info("test:{}", this);
+            log.info("test:{}, {}", this, httpClient);
             httpClient.getAbs("http://example.com/", event -> {
                 context.response()
                        .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "text/plain")
